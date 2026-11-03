@@ -1,0 +1,27 @@
+# Etapa 1 do BLFS: a área de trabalho. Só os programas pedidos; as dependências a ferramenta do BLFS acha sozinha.
+postlfs-config-profile   # os arquivos de início do bash (/etc/profile)
+make-ca                  # certificados (HTTPS)
+wget
+sudo
+dhcpcd                   # internet no .iso (no celular quem dá a internet é o Android)
+xdg-utils
+xdg-user-dirs
+desktop-file-utils
+tigervnc                 # o servidor gráfico Xvnc: desenha a tela e manda para o Jarvis
+xinit
+xfce4-session
+xfwm4
+xfce4-panel
+thunar                   # arquivos
+xfdesktop
+xfce4-settings
+xfce4-terminal
+xfce4-appfinder
+xfce4-notifyd
+tumbler
+mousepad                 # editor de texto
+ristretto                # fotos
+xarchiver                # arquivos .zip
+adwaita-icon-theme
+hicolor-icon-theme
+git                      # programação (o Python, o GCC e o Vim já vêm do LFS)

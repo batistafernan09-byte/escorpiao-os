@@ -1,0 +1,116 @@
+# Uma etapa da construção (no máximo 6 horas num computador ARM64 do GitHub). Ela traz o sistema da etapa anterior,
+# roda o maestro (construir.sh) e guarda o resultado para a próxima.
+name: etapa
+on:
+  workflow_call:
+    inputs:
+      retomar:
+        description: "número de uma execução anterior para continuar dela (vazio = a anterior desta mesma execução)"
+        type: string
+        default: ""
+    outputs:
+      situacao:
+        value: ${{ jobs.construir.outputs.situacao }}
+
+jobs:
+  construir:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 355
+    outputs:
+      situacao: ${{ steps.maestro.outputs.situacao }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Espaço em disco
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache /usr/share/swift || true
+          sudo docker system prune -af >/dev/null 2>&1 || true
+          df -h /
+
+      - name: Ferramentas do computador (as exigências do livro LFS e do jhalfs)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q build-essential bison gawk texinfo m4 python3 xsltproc libxml2-utils docbook-xml \
+               docbook-xsl-nons wget zstd squashfs-tools xorriso mtools grub-efi-arm64-bin cpio
+          sudo ln -sf bash /bin/sh        # o livro pede que o sh seja o bash
+
+      - name: Livros (LFS 12.4 ARM64, BLFS 12.4) e a ferramenta oficial jhalfs
+        run: |
+          git clone -q --depth 1 --branch xry111/arm64-r12.4 https://github.com/lfs-book/lfs livros/lfs
+          git clone -q --depth 1 --branch r12.4 https://github.com/lfs-book/blfs livros/blfs
+          git clone -q https://github.com/lfs-book/jhalfs livros/jhalfs
+          git -C livros/jhalfs checkout -q a13fd9828b8c28d02dfde824a441cd7dd3a1643d
+
+      - name: O disco do sistema novo (/mnt/lfs)
+        run: |
+          D=$(df --output=avail,target -B1 / /mnt 2>/dev/null | tail -n +2 | sort -n | tail -1 | awk '{print $2}')
+          echo "maior espaço livre em: $D"
+          sudo fallocate -l 60G "$D/lfs.img" 2>/dev/null || sudo truncate -s 60G "$D/lfs.img"
+          sudo mkfs.ext4 -q -F "$D/lfs.img"
+          sudo mkdir -p /mnt/lfs && sudo mount -o loop "$D/lfs.img" /mnt/lfs
+          df -h /mnt/lfs
+
+      - name: Trazer o sistema da etapa anterior (desta execução)
+        if: inputs.retomar == ''
+        uses: actions/download-artifact@v4
+        with: { name: sistema, path: /tmp/anterior }
+        continue-on-error: true
+
+      - name: Trazer o sistema de uma execução anterior
+        if: inputs.retomar != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: sistema
+          path: /tmp/anterior
+          run-id: ${{ inputs.retomar }}
+          github-token: ${{ github.token }}
+
+      - name: Desempacotar
+        run: |
+          if [ -f /tmp/anterior/sistema.tar.zst ]; then
+            sudo tar -I zstd --numeric-owner -xpf /tmp/anterior/sistema.tar.zst -C /mnt/lfs && rm -f /tmp/anterior/sistema.tar.zst
+            ls /mnt/lfs/.etapas || true
+          else
+            echo "começando do zero"
+          fi
+
+      - name: O maestro (faz o que falta, por até 4h50)
+        id: maestro
+        run: |
+          set +e; ./construir.sh 290; r=$?; set -e
+          case $r in
+            0) echo situacao=pronto >> "$GITHUB_OUTPUT" ;;
+            3) echo situacao=continuar >> "$GITHUB_OUTPUT" ;;
+            *) echo situacao=erro >> "$GITHUB_OUTPUT"; exit 1 ;;
+          esac
+
+      - name: Guardar o sistema para a próxima etapa
+        if: always() && steps.maestro.outputs.situacao != 'pronto'
+        run: |
+          sudo umount -R /mnt/lfs/{dev,proc,sys,run} 2>/dev/null || true
+          sudo tar --numeric-owner -I 'zstd -T0 -3' -cpf /tmp/sistema.tar.zst -C /mnt/lfs \
+               --exclude='./proc/*' --exclude='./sys/*' --exclude='./dev/*' --exclude='./run/*' --exclude='./sources/build/*' .
+          sudo chown "$(id -u)" /tmp/sistema.tar.zst; ls -la /tmp/sistema.tar.zst
+
+      - name: Enviar o sistema (para continuar)
+        if: always() && steps.maestro.outputs.situacao != 'pronto'
+        uses: actions/upload-artifact@v4
+        with: { name: sistema, path: /tmp/sistema.tar.zst, overwrite: true, retention-days: 7, compression-level: 0 }
+
+      - name: Registros (para achar o erro)
+        if: failure()
+        run: sudo tar -czf /tmp/registros.tar.gz -C /mnt/lfs jhalfs/logs blfs/logs 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: registros
+          path: /tmp/registros.tar.gz
+          overwrite: true
+          retention-days: 7
+
+      - name: Enviar as entregas
+        if: steps.maestro.outputs.situacao == 'pronto'
+        uses: actions/upload-artifact@v4
+        with: { name: entregas, path: saida/, retention-days: 7, compression-level: 0 }

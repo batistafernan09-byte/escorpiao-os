@@ -1,0 +1,6 @@
+# Etapa 2 do BLFS: os extras escolhidos (os mais pesados ficam por último).
+gnumeric                 # planilhas (o AbiWord saiu do livro BLFS 12.4 — está só no arquivo antigo)
+parole                   # vídeo e música (XFCE)
+gst10-libav              # os formatos de vídeo e música do Parole
+mpv                      # outro player de vídeo, leve
+firefox                  # navegador (o mais pesado: precisa compilar o Rust, o LLVM e o próprio Firefox)

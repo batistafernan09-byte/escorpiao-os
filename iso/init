@@ -1,0 +1,20 @@
+#!/bin/bash
+# O primeiro programa do .iso (dentro do initramfs): acha o disco do Escorpião OS, monta o sistema comprimido
+# (squashfs) com uma camada de escrita na memória (overlay) e passa o controle para o /sbin/init do sistema.
+export PATH=/bin
+mount -t proc proc /proc; mount -t sysfs sysfs /sys; mount -t devtmpfs devtmpfs /dev
+echo "Escorpião OS: procurando o disco..."
+dev=""
+for i in $(seq 1 30); do
+  dev=$(blkid -L ESCORPIAO 2>/dev/null) && [ -n "$dev" ] && break
+  sleep 1
+done
+if [ -z "$dev" ]; then echo "Não achei o disco do Escorpião OS (rótulo ESCORPIAO). Abrindo um terminal de socorro."; exec bash; fi
+mkdir -p /run/iso /run/ro /run/rw /novo
+mount -t iso9660 -o ro "$dev" /run/iso
+mount -t squashfs -o loop,ro /run/iso/LiveOS/sistema.sfs /run/ro
+mount -t tmpfs -o mode=755 tmpfs /run/rw && mkdir -p /run/rw/cima /run/rw/trabalho
+mount -t overlay overlay -o lowerdir=/run/ro,upperdir=/run/rw/cima,workdir=/run/rw/trabalho /novo
+umount /proc /sys
+mount --move /dev /novo/dev
+exec switch_root /novo /sbin/init

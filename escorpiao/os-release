@@ -1,0 +1,8 @@
+NAME="Escorpião OS"
+VERSION="1.0 (LFS 12.4 ARM64)"
+ID=escorpiao
+ID_LIKE=lfs
+PRETTY_NAME="Escorpião OS 1.0"
+VERSION_ID="1.0"
+VERSION_CODENAME="12.4"
+HOME_URL="https://github.com/"

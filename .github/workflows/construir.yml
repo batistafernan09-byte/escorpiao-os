@@ -1,0 +1,98 @@
+# Constrói o Escorpião OS do zero no GitHub: LFS 12.4 ARM64 + BLFS 12.4 (XFCE, TigerVNC e os extras).
+# Roda em etapas de até 6 horas (o limite do GitHub); cada etapa continua de onde a anterior parou.
+# No fim publica em "Releases": o .iso, o kernel, o pacote para o celular, o proot e os códigos-fonte.
+name: Construir o Escorpião OS
+on:
+  workflow_dispatch:
+    inputs:
+      retomar:
+        description: "Continuar de uma execução anterior (o número dela). Vazio = começar do zero."
+        type: string
+        default: ""
+  push:
+    branches: [construir]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: construir
+  cancel-in-progress: false
+
+jobs:
+  proot:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash android/fazer-proot.sh saida-proot
+      - uses: actions/upload-artifact@v4
+        with: { name: proot, path: saida-proot/ }
+
+  etapa-01:
+    uses: ./.github/workflows/etapa.yml
+    with:
+      retomar: ${{ github.event.inputs.retomar || '' }}
+
+  etapa-02:
+    needs: etapa-01
+    if: needs.etapa-01.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-03:
+    needs: etapa-02
+    if: needs.etapa-02.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-04:
+    needs: etapa-03
+    if: needs.etapa-03.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-05:
+    needs: etapa-04
+    if: needs.etapa-04.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-06:
+    needs: etapa-05
+    if: needs.etapa-05.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-07:
+    needs: etapa-06
+    if: needs.etapa-06.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-08:
+    needs: etapa-07
+    if: needs.etapa-07.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-09:
+    needs: etapa-08
+    if: needs.etapa-08.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  etapa-10:
+    needs: etapa-09
+    if: needs.etapa-09.outputs.situacao == 'continuar'
+    uses: ./.github/workflows/etapa.yml
+
+  publicar:
+    needs: [proot, etapa-01, etapa-02, etapa-03, etapa-04, etapa-05, etapa-06, etapa-07, etapa-08, etapa-09, etapa-10]
+    if: always() && needs.proot.result == 'success' && contains(join(needs.*.outputs.situacao, ','), 'pronto')
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: entregas, path: saida }
+      - uses: actions/download-artifact@v4
+        with: { name: proot, path: saida }
+      - name: Publicar em Releases
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          ( cd saida && sha256sum * > SHA256SUMS )
+          gh release create "v1.0-${{ github.run_number }}" saida/* --latest \
+            --title "Escorpião OS 1.0 (construção ${{ github.run_number }})" --notes-file NOTAS.md
