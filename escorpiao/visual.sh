@@ -7,7 +7,7 @@ H="${HOME:-/root}"
 X="$H/.config/xfce4/xfconf/xfce-perchannel-xml"
 P="$H/.config/xfce4/panel"
 S=/usr/share/escorpiao
-mkdir -p "$X" "$P/launcher-3" "$P/launcher-4" "$P/launcher-5" "$H/Desktop" "$H/.local/share/applications"
+mkdir -p "$X" "$P/launcher-3" "$P/launcher-4" "$P/launcher-5" "$P/launcher-6" "$P/launcher-7" "$H/Desktop" "$H/.local/share/applications"
 
 lanc() {   # lanc <arquivo> <nome> <comando> <ícone>
   cat > "$1" <<EOF
@@ -25,6 +25,8 @@ NAVI=org.xfce.webbrowser; command -v firefox >/dev/null 2>&1 && NAVI=firefox
 lanc "$P/launcher-3/navegador.desktop" "Navegador" "$NAV" "$NAVI"
 lanc "$P/launcher-4/arquivos.desktop"  "Arquivos"  "thunar" "org.xfce.thunar"
 lanc "$P/launcher-5/terminal.desktop"  "Terminal"  "xfce4-terminal" "org.xfce.terminalemulator"
+lanc "$P/launcher-6/editor.desktop"    "Editor"    "mousepad" "org.xfce.mousepad"
+lanc "$P/launcher-7/ajustes.desktop"   "Ajustes"   "xfce4-settings-manager" "org.xfce.settings.manager"
 # (na área de trabalho só o LEIA-ME: atalhos .desktop ali pedem "confiar no atalho" a cada vez no XFCE 4.18+)
 cat > "$H/Desktop/LEIA-ME.txt" <<'EOF'
 ESCORPIÃO OS
@@ -45,7 +47,7 @@ cat > "$X/xsettings.xml" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
-    <property name="ThemeName" type="string" value="Adwaita"/>
+    <property name="ThemeName" type="string" value="Adwaita-dark"/>
     <property name="IconThemeName" type="string" value="Adwaita"/>
   </property>
   <property name="Gtk" type="empty">
@@ -103,8 +105,15 @@ cat > "$X/xfce4-panel.xml" <<'EOF'
       <property name="position" type="string" value="p=10;x=0;y=0"/>
       <property name="length" type="uint" value="100"/>
       <property name="position-locked" type="bool" value="true"/>
-      <property name="size" type="uint" value="44"/>
-      <property name="icon-size" type="uint" value="28"/>
+      <property name="size" type="uint" value="46"/>
+      <property name="icon-size" type="uint" value="30"/>
+      <property name="background-style" type="uint" value="1"/>
+      <property name="background-rgba" type="array">
+        <value type="double" value="0.10"/>
+        <value type="double" value="0.043"/>
+        <value type="double" value="0.18"/>
+        <value type="double" value="0.94"/>
+      </property>
       <property name="plugin-ids" type="array">
         <value type="int" value="1"/>
         <value type="int" value="2"/>
@@ -115,6 +124,8 @@ cat > "$X/xfce4-panel.xml" <<'EOF'
         <value type="int" value="7"/>
         <value type="int" value="8"/>
         <value type="int" value="9"/>
+        <value type="int" value="10"/>
+        <value type="int" value="11"/>
       </property>
     </property>
   </property>
@@ -137,16 +148,22 @@ cat > "$X/xfce4-panel.xml" <<'EOF'
     <property name="plugin-5" type="string" value="launcher">
       <property name="items" type="array"><value type="string" value="terminal.desktop"/></property>
     </property>
-    <property name="plugin-6" type="string" value="tasklist">
+    <property name="plugin-6" type="string" value="launcher">
+      <property name="items" type="array"><value type="string" value="editor.desktop"/></property>
+    </property>
+    <property name="plugin-7" type="string" value="launcher">
+      <property name="items" type="array"><value type="string" value="ajustes.desktop"/></property>
+    </property>
+    <property name="plugin-8" type="string" value="tasklist">
       <property name="show-labels" type="bool" value="false"/>
       <property name="flat-buttons" type="bool" value="true"/>
     </property>
-    <property name="plugin-7" type="string" value="separator">
+    <property name="plugin-9" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
       <property name="style" type="uint" value="0"/>
     </property>
-    <property name="plugin-8" type="string" value="systray"/>
-    <property name="plugin-9" type="string" value="clock">
+    <property name="plugin-10" type="string" value="systray"/>
+    <property name="plugin-11" type="string" value="clock">
       <property name="digital-format" type="string" value="%H:%M%n%d/%m/%Y"/>
     </property>
   </property>
