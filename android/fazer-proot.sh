@@ -7,14 +7,15 @@
 set -euo pipefail
 OUT=$(realpath -m "$1"); mkdir -p "$OUT"
 docker run --rm -v "$OUT:/out" alpine:3.20 sh -euxc '
-  apk add --no-cache build-base git linux-headers python3 wget
+  apk add --no-cache build-base git linux-headers bsd-compat-headers python3 wget
   # talloc estático (a única biblioteca que o proot usa)
   wget -q https://www.samba.org/ftp/talloc/talloc-2.4.2.tar.gz && tar -xf talloc-2.4.2.tar.gz && cd talloc-2.4.2
   ./configure --prefix=/usr --disable-python --disable-rpath --without-gettext >/dev/null
   make -j"$(nproc)" >/dev/null
   ar rcs /usr/lib/libtalloc.a $(find bin/default -maxdepth 1 -name "talloc.c.*.o") $(find bin/default/lib/replace -name "*.o" 2>/dev/null) && cp talloc.h /usr/include/
   cd / && git clone --depth 1 https://github.com/termux/proot && cd proot/src
-  make -j"$(nproc)" PROOT_UNBUNDLE_LOADER=/naousado LDFLAGS="-static -ltalloc -Wl,-z,noexecstack" proot loader/loader
+  # HAS_LOADER_32BIT= desliga o loader de 32 bits (no ARM64 ele usa -m32, que não existe aqui; a distro é só 64 bits)
+  make -j"$(nproc)" PROOT_UNBUNDLE_LOADER=/naousado HAS_LOADER_32BIT= LDFLAGS="-static -ltalloc -Wl,-z,noexecstack" proot loader/loader
   strip proot loader/loader
   cp proot /out/libproot.so && cp loader/loader /out/libproot-loader.so
   cp ../COPYING /out/PROOT-LICENCA.txt
