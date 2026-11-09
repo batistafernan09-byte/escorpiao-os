@@ -38,6 +38,9 @@ if ! feito lfs; then
     python3 "$REPO/lfs/gerar-config.py" "$LIVROS/jhalfs" "$LIVROS/lfs" "$LFS" "$REPO/trabalho/kernel-config" "$LFS/sources"
     ( cd "$LIVROS/jhalfs" && touch -d '1 hour ago' configuration.old && printf 'yes\nyes\n' | ./jhalfs run )
     [ -f "$LFS/jhalfs/Makefile" ] || { echo "o jhalfs não gerou o Makefile"; exit 1; }
+    # o computador do GitHub não tem terminal (TTY); o jhalfs checa o tamanho do terminal (stty size) e falha logo de cara.
+    # Essa checagem não serve numa build automática, então tiro ela do alvo principal (ck_UID e ck_mountpoint continuam).
+    sudo sed -i 's/ ck_terminal//' "$LFS/jhalfs/Makefile"
   fi
   # a etapa anterior pode ter parado nos capítulos 5-6 (feitos pelo usuário "lfs" do computador do GitHub)
   if [ -e "$LFS/jhalfs/mk_SETUP" ] && [ ! -e "$LFS/jhalfs/mk_SUDO" ] && ! id lfs >/dev/null 2>&1; then
