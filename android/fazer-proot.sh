@@ -14,6 +14,8 @@ docker run --rm -v "$OUT:/out" alpine:3.20 sh -euxc '
   make -j"$(nproc)" >/dev/null
   ar rcs /usr/lib/libtalloc.a $(find bin/default -maxdepth 1 -name "talloc.c.*.o") $(find bin/default/lib/replace -name "*.o" 2>/dev/null) && cp talloc.h /usr/include/
   cd / && git clone --depth 1 https://github.com/termux/proot && cd proot/src
+  # musl já tem rlimit de 64 bits: "struct rlimit64"/"prlimit64" só existem no glibc, troca pelos nomes normais
+  sed -i "s/rlimit64/rlimit/g" syscall/rlimit.c
   # HAS_LOADER_32BIT= desliga o loader de 32 bits (no ARM64 ele usa -m32, que não existe aqui; a distro é só 64 bits)
   make -j"$(nproc)" PROOT_UNBUNDLE_LOADER=/naousado HAS_LOADER_32BIT= LDFLAGS="-static -ltalloc -Wl,-z,noexecstack" proot loader/loader
   strip proot loader/loader

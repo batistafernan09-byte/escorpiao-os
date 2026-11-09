@@ -1,0 +1,20 @@
+name: proot (teste isolado)
+# Só pra ajustar a compilação do proot sem reiniciar a build grande do Linux.
+# Dispara quando mexo no script do proot (branch main) ou na mão.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - android/fazer-proot.sh
+      - .github/workflows/proot.yml
+
+jobs:
+  proot:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash android/fazer-proot.sh saida-proot
+      - uses: actions/upload-artifact@v4
+        with: { name: proot, path: saida-proot/ }
