@@ -20,6 +20,8 @@ docker run --rm -v "$OUT:/out" alpine:3.20 sh -euxc '
   sed -i "s/struct statfs64 my_statfs64/struct statfs my_statfs64/; s/= statfs64(path/= statfs(path/" tracee/seccomp.c
   # MSG_COPY é uma constante do Linux que o musl não declara no sys/msg.h — define se faltar
   sed -i "1i #ifndef MSG_COPY\\n#define MSG_COPY 040000\\n#endif" extension/sysvipc/sysvipc_msg.c
+  # TEMP_FAILURE_RETRY é um macro do glibc (repete a chamada se for interrompida); o musl não tem, define igual
+  sed -i "1i #ifndef TEMP_FAILURE_RETRY\\n#define TEMP_FAILURE_RETRY(e) (__extension__({ long _r; do _r=(long)(e); while(_r==-1L \\&\\& errno==EINTR); _r; }))\\n#endif" extension/sysvipc/sysvipc_shm.c
   # HAS_LOADER_32BIT= desliga o loader de 32 bits (no ARM64 ele usa -m32, que não existe aqui; a distro é só 64 bits)
   make -j"$(nproc)" PROOT_UNBUNDLE_LOADER=/naousado HAS_LOADER_32BIT= LDFLAGS="-static -ltalloc -Wl,-z,noexecstack" proot loader/loader
   strip proot loader/loader
