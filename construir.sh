@@ -51,6 +51,11 @@ if ! feito lfs; then
   if timeout "$(resto)m" make -C "$LFS/jhalfs"; then
     marcar lfs
   else
+    # mostra o fim do registro do pacote que parou (pode ser erro de verdade, não só falta de tempo)
+    echo "### o make do LFS parou — últimos registros do(s) pacote(s) mais recente(s):"
+    for lg in $(sudo ls -t "$LFS/jhalfs/logs" 2>/dev/null | head -2); do
+      echo "===== $lg ====="; sudo tail -n 40 "$LFS/jhalfs/logs/$lg" 2>/dev/null || true
+    done
     [ -d /home/lfs ] && sudo rm -rf "$LFS/.casa-lfs" && sudo cp -a /home/lfs "$LFS/.casa-lfs"
     tempo_acabou "LFS"
   fi
