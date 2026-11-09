@@ -51,20 +51,16 @@ jobs:
           sudo mkdir -p /mnt/lfs && sudo mount -o loop "$D/lfs.img" /mnt/lfs
           df -h /mnt/lfs
 
-      - name: Trazer o sistema da etapa anterior (desta execução)
-        if: inputs.retomar == ''
-        uses: actions/download-artifact@v4
-        with: { name: sistema, path: /tmp/anterior }
-        continue-on-error: true
-
-      - name: Trazer o sistema de uma execução anterior
-        if: inputs.retomar != ''
+      - name: Trazer o sistema da etapa anterior
+        # forma confiável: aponta o número da build (esta, ou a que o 'retomar' indicar) e usa o token.
+        # continue-on-error porque a 1ª etapa não tem nada para baixar ainda (aí começa do zero).
         uses: actions/download-artifact@v4
         with:
           name: sistema
           path: /tmp/anterior
-          run-id: ${{ inputs.retomar }}
+          run-id: ${{ inputs.retomar != '' && inputs.retomar || github.run_id }}
           github-token: ${{ github.token }}
+        continue-on-error: true
 
       - name: Desempacotar
         run: |
