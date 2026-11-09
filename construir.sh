@@ -25,6 +25,12 @@ trap desmonta EXIT
 
 # ---------------------------------------------------------------- 1. LFS (o livro, capítulos 4 a 10)
 if ! feito lfs; then
+  # Garante os patches do LFS em $LFS/sources. O jhalfs às vezes baixa o pacote mas deixa o patch escapar (foi o que
+  # travou a glibc). Roda em toda etapa; -nc não rebaixa o que já existe. Os patches são poucos e pequenos.
+  sudo mkdir -p "$LFS/sources" && sudo chmod 1777 "$LFS/sources"
+  echo "### garantindo os patches do LFS 12.4 (em $LFS/sources)"
+  sudo wget -q -nc -r -np -nd -l1 -A '*.patch' -P "$LFS/sources" "https://www.linuxfromscratch.org/patches/lfs/12.4/" 2>/dev/null || echo "(aviso: a pasta de patches não respondeu)"
+  echo "### patches presentes: $(ls "$LFS/sources"/*.patch 2>/dev/null | wc -l) (glibc-fhs: $(ls "$LFS/sources"/glibc-*-fhs-*.patch 2>/dev/null | wc -l))"
   if [ ! -f "$LFS/jhalfs/Makefile" ]; then
     echo "### preparando o jhalfs com o livro LFS 12.4 ARM64"
     K=$REPO/trabalho/kernel; mkdir -p "$K"
