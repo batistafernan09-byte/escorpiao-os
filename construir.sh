@@ -25,12 +25,21 @@ trap desmonta EXIT
 
 # ---------------------------------------------------------------- 1. LFS (o livro, capítulos 4 a 10)
 if ! feito lfs; then
-  # Garante os patches do LFS em $LFS/sources. O jhalfs às vezes baixa o pacote mas deixa o patch escapar (foi o que
-  # travou a glibc). Roda em toda etapa; -nc não rebaixa o que já existe. Os patches são poucos e pequenos.
-  sudo mkdir -p "$LFS/sources" && sudo chmod 1777 "$LFS/sources"
-  echo "### garantindo os patches do LFS 12.4 (em $LFS/sources)"
-  sudo wget -q -nc -r -np -nd -l1 -A '*.patch' -P "$LFS/sources" "https://www.linuxfromscratch.org/patches/lfs/12.4/" 2>/dev/null || echo "(aviso: a pasta de patches não respondeu)"
-  echo "### patches presentes: $(ls "$LFS/sources"/*.patch 2>/dev/null | wc -l) (glibc-fhs: $(ls "$LFS/sources"/glibc-*-fhs-*.patch 2>/dev/null | wc -l))"
+  # Garante TODAS as fontes (pacotes + patches) em $LFS/sources. O jhalfs às vezes baixa incompleto (faltaram o patch
+  # da glibc e o tarball do ncurses). Extrai a lista oficial do próprio livro (urls.xsl do jhalfs) e baixa o que falta.
+  # Roda em toda etapa; -nc não rebaixa o que já existe.
+  sudo mkdir -p "$LFS/sources" && sudo chmod 1777 "$LFS/sources"; mkdir -p "$REPO/trabalho"
+  echo "### garantindo as fontes do livro (lista oficial do LFS)"
+  ( cd "$LIVROS/lfs" && bash git-version.sh sysv >/dev/null 2>&1 || true )   # cria conditional.ent (resolve as entidades)
+  xsltproc --xinclude --nonet --stringparam revision sysv "$LIVROS/jhalfs/common/urls.xsl" "$LIVROS/lfs/index.xml" 2>/dev/null \
+    | grep -oE 'https?://[^ ]+' | sort -u > "$REPO/trabalho/wget-list" || true
+  if [ -s "$REPO/trabalho/wget-list" ]; then
+    echo "### $(wc -l < "$REPO/trabalho/wget-list") fontes na lista; baixando as que faltam"
+    sudo wget -q -nc -T 60 -t 3 -P "$LFS/sources" -i "$REPO/trabalho/wget-list" 2>/dev/null || true
+  else
+    echo "(aviso: não consegui gerar a lista de fontes; seguindo com o que o jhalfs baixar)"
+  fi
+  echo "### fontes presentes: $(ls -1 "$LFS/sources" 2>/dev/null | grep -ivE '\.patch$|^build$' | wc -l) pacotes + $(ls -1 "$LFS/sources"/*.patch 2>/dev/null | wc -l) patches"
   if [ ! -f "$LFS/jhalfs/Makefile" ]; then
     echo "### preparando o jhalfs com o livro LFS 12.4 ARM64"
     K=$REPO/trabalho/kernel; mkdir -p "$K"
