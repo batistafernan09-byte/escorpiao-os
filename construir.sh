@@ -25,19 +25,39 @@ trap desmonta EXIT
 
 # ---------------------------------------------------------------- 1. LFS (o livro, capítulos 4 a 10)
 if ! feito lfs; then
-  # Garante TODAS as fontes (pacotes + patches) em $LFS/sources. O jhalfs às vezes baixa incompleto (faltaram o patch
-  # da glibc e o tarball do ncurses). Extrai a lista oficial do próprio livro (urls.xsl do jhalfs) e baixa o que falta.
-  # Roda em toda etapa; -nc não rebaixa o que já existe.
+  # Garante TODAS as fontes (pacotes + patches) em $LFS/sources. O jhalfs às vezes baixa incompleto, e a lista que o
+  # urls.xsl gera saiu curta (faltou o ncurses). A lista OFICIAL e completa é a do próprio fork ARM64 (wget-list-sysv);
+  # usamos ela como base e ainda juntamos o que o urls.xsl achar. Pacotes "datados" (ex.: o snapshot ncurses-6.5-2025...)
+  # somem do diretório 'current' do servidor original quando sai uma versão nova — para esses, caímos num espelho do LFS
+  # que guarda o conjunto exato da versão 12.4. Roda em toda etapa; -nc não rebaixa o que já existe.
   sudo mkdir -p "$LFS/sources" && sudo chmod 1777 "$LFS/sources"; mkdir -p "$REPO/trabalho"
-  echo "### garantindo as fontes do livro (lista oficial do LFS)"
+  WL="$REPO/trabalho/wget-list"
+  echo "### garantindo as fontes do livro (lista oficial do fork ARM64 + urls.xsl)"
+  : > "$WL"
+  for u in "https://www.linuxfromscratch.org/~xry111/lfs/view/arm64/wget-list-sysv" \
+           "https://www.linuxfromscratch.org/~xry111/lfs/wget-list-sysv"; do
+    wget -q -O "$WL.oficial" "$u" 2>/dev/null && [ -s "$WL.oficial" ] && { cat "$WL.oficial" >> "$WL"; break; }
+  done
   ( cd "$LIVROS/lfs" && bash git-version.sh sysv >/dev/null 2>&1 || true )   # cria conditional.ent (resolve as entidades)
   xsltproc --xinclude --nonet --stringparam revision sysv "$LIVROS/jhalfs/common/urls.xsl" "$LIVROS/lfs/index.xml" 2>/dev/null \
-    | grep -oE 'https?://[^ ]+' | sort -u > "$REPO/trabalho/wget-list" || true
-  if [ -s "$REPO/trabalho/wget-list" ]; then
-    echo "### $(wc -l < "$REPO/trabalho/wget-list") fontes na lista; baixando as que faltam"
-    sudo wget -q -nc -T 60 -t 3 -P "$LFS/sources" -i "$REPO/trabalho/wget-list" 2>/dev/null || true
+    | grep -oE 'https?://[^ ]+' >> "$WL" || true
+  grep -E '^https?://' "$WL" | sort -u -o "$WL"
+  if [ -s "$WL" ]; then
+    echo "### $(wc -l < "$WL") fontes na lista; baixando as que faltam"
+    sudo wget -q -nc -T 45 -t 2 -P "$LFS/sources" -i "$WL" 2>/dev/null || true
+    # reserva: busca nos espelhos do LFS 12.4 só o que ainda falta (ex.: snapshot datado que saiu do 'current')
+    for m in "https://mirrors.aliyun.com/lfs/lfs-packages/12.4" \
+             "https://ftp.osuosl.org/pub/lfs/lfs-packages/12.4" \
+             "https://mirror.rackspace.com/lfs/lfs-packages/12.4"; do
+      falta=0
+      while read -r u; do
+        f=$(basename "$u"); [ -s "$LFS/sources/$f" ] && continue
+        falta=1; sudo wget -q -nc -T 30 -t 1 -P "$LFS/sources" "$m/$f" 2>/dev/null || true
+      done < "$WL"
+      [ "$falta" = 0 ] && break
+    done
   else
-    echo "(aviso: não consegui gerar a lista de fontes; seguindo com o que o jhalfs baixar)"
+    echo "(aviso: não consegui montar a lista de fontes; seguindo com o que o jhalfs baixar)"
   fi
   echo "### fontes presentes: $(ls -1 "$LFS/sources" 2>/dev/null | grep -ivE '\.patch$|^build$' | wc -l) pacotes + $(ls -1 "$LFS/sources"/*.patch 2>/dev/null | wc -l) patches"
   if [ ! -f "$LFS/jhalfs/Makefile" ]; then
