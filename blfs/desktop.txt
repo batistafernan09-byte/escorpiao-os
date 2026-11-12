@@ -1,6 +1,7 @@
 # Etapa 1 do BLFS: a área de trabalho. Só os programas pedidos; as dependências a ferramenta do BLFS acha sozinha.
 postlfs-config-profile   # os arquivos de início do bash (/etc/profile)
 make-ca                  # certificados (HTTPS)
+icu                      # biblioteca de texto Unicode; o livro compila o libxml2 com --with-icu (dep. recomendada)
 wget
 sudo
 dhcpcd                   # internet no .iso (no celular quem dá a internet é o Android)

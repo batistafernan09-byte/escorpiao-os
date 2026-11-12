@@ -97,6 +97,14 @@ if ! feito lfs; then
 fi
 
 # ---------------------------------------------------------------- 2-4. BLFS (a área de trabalho e os extras)
+# Se as listas de programas mudaram (desktop.txt/extras.txt), recalcula os scripts. Os pacotes já instalados continuam
+# marcados em blfs/feitos/ (a marca é pelo NOME do pacote, não pelo número), então só os novos/que faltam é que compilam.
+BLFS_HASH=$(cat "$REPO/blfs/desktop.txt" "$REPO/blfs/extras.txt" 2>/dev/null | sha1sum | cut -c1-12)
+if [ "$(sudo cat "$E/blfs-lista-hash" 2>/dev/null || true)" != "$BLFS_HASH" ]; then
+  echo "### a lista de programas do BLFS mudou (ou é a 1ª vez) — vou recalcular os scripts"
+  sudo rm -f "$E/blfs-preparado" "$E/desktop" "$E/extras"
+  echo "$BLFS_HASH" | sudo tee "$E/blfs-lista-hash" >/dev/null
+fi
 if ! feito blfs-preparado; then
   echo "### BLFS: calculando o que instalar e em que ordem (ferramenta do jhalfs lendo o livro BLFS 12.4)"
   T=$REPO/trabalho; mkdir -p "$T"
