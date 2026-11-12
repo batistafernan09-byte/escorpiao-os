@@ -3,6 +3,8 @@ postlfs-config-profile   # os arquivos de início do bash (/etc/profile)
 make-ca                  # certificados (HTTPS)
 icu                      # biblioteca de texto Unicode; o livro compila o libxml2 com --with-icu (dep. recomendada)
 libtasn1                 # ASN.1 (necessário pelo gnutls, que entra como dep. do stack de TLS)
+libunistring             # normalização Unicode (gnutls procura u8_normalize)
+p11-kit                  # armazém de certificados do gnutls (PKCS#11); usa o libtasn1
 wget
 sudo
 dhcpcd                   # internet no .iso (no celular quem dá a internet é o Android)
